@@ -1,0 +1,5 @@
+{
+  "name": "MAC PP Project Command Center",
+  "description": "A comprehensive project management dashboard for MAC Products featuring pipeline tracking, milestone management, and a secure audit log for all changes.",
+  "requestFramePermissions": []
+}
