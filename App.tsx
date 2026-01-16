@@ -304,6 +304,9 @@ const App: React.FC = () => {
       punch_list: updated.punchList || []
     };
 
+    console.log('Saving project with punch list:', updated.punchList);
+    console.log('Update data being sent to Supabase:', updateData);
+
     const { error: updateError } = await supabase
       .from('projects')
       .update(updateData)
@@ -311,7 +314,10 @@ const App: React.FC = () => {
 
     if (updateError) {
       console.error('Error updating project:', updateError);
+      alert('Error saving to database: ' + updateError.message + '. Changes saved locally only.');
       // Don't return - still update local state even if Supabase fails
+    } else {
+      console.log('Project saved successfully to Supabase');
     }
 
     if (diffs.length > 0) {
