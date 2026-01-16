@@ -287,29 +287,35 @@ const App: React.FC = () => {
     });
 
     // Update project in Supabase
+    const updateData: any = {
+      category: updated.category,
+      utility: updated.utility,
+      substation: updated.substation,
+      date_created: updated.dateCreated,
+      order_number: updated.order,
+      fat_date: updated.fatDate,
+      landing: updated.landing,
+      status: updated.status,
+      progress: updated.progress,
+      lead: updated.lead,
+      description: updated.description,
+      comments: updated.comments,
+      milestones: updated.milestones
+    };
+
+    // Only include punch_list if the project has punch list items
+    if (updated.punchList && updated.punchList.length > 0) {
+      updateData.punch_list = updated.punchList;
+    }
+
     const { error: updateError } = await supabase
       .from('projects')
-      .update({
-        category: updated.category,
-        utility: updated.utility,
-        substation: updated.substation,
-        date_created: updated.dateCreated,
-        order_number: updated.order,
-        fat_date: updated.fatDate,
-        landing: updated.landing,
-        status: updated.status,
-        progress: updated.progress,
-        lead: updated.lead,
-        description: updated.description,
-        comments: updated.comments,
-        milestones: updated.milestones,
-        punch_list: updated.punchList || []
-      })
+      .update(updateData)
       .eq('id', updated.id);
 
     if (updateError) {
       console.error('Error updating project:', updateError);
-      return;
+      // Don't return - still update local state even if Supabase fails
     }
 
     if (diffs.length > 0) {
