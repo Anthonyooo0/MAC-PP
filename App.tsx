@@ -1,10 +1,10 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  Project, 
-  ProjectStatus, 
-  ViewMode, 
-  ProjectCategory, 
+import {
+  Project,
+  ProjectStatus,
+  ViewMode,
+  ProjectCategory,
   ChangeLogEntry,
   Milestones
 } from './types';
@@ -30,17 +30,13 @@ import { Login } from './components/Login';
 import { MilestoneStepper } from './components/MilestoneStepper';
 import { ProjectEditModal } from './components/ProjectEditModal';
 import { NewProjectModal } from './components/NewProjectModal';
+import { supabase } from './supabase';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>(() => {
-    const saved = localStorage.getItem('mac_projects');
-    return saved ? JSON.parse(saved) : INITIAL_DATA;
-  });
-  const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>(() => {
-    const saved = localStorage.getItem('mac_changelog');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [activeTab, setActiveTab] = useState<ProjectCategory>('Pumping');
   const [searchTerm, setSearchTerm] = useState('');
@@ -56,15 +52,116 @@ const App: React.FC = () => {
     if (savedUser) setCurrentUser(savedUser);
   }, []);
 
-  // Save projects to localStorage whenever they change
+  // Load data from Supabase
   useEffect(() => {
-    localStorage.setItem('mac_projects', JSON.stringify(projects));
-  }, [projects]);
+    const loadData = async () => {
+      setLoading(true);
 
-  // Save changelog to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('mac_changelog', JSON.stringify(changeLog));
-  }, [changeLog]);
+      // Load projects
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (projectsError) {
+        console.error('Error loading projects:', projectsError);
+      } else if (projectsData && projectsData.length > 0) {
+        // Transform database format to app format
+        const transformedProjects = projectsData.map(p => ({
+          id: p.id,
+          category: p.category,
+          utility: p.utility,
+          substation: p.substation,
+          dateCreated: p.date_created,
+          order: p.order_number,
+          fatDate: p.fat_date || 'N/A',
+          landing: p.landing || 'TBD',
+          status: p.status,
+          progress: p.progress,
+          lead: p.lead || 'TBD',
+          description: p.description || '',
+          comments: p.comments || '',
+          milestones: p.milestones || { design: false, mat: false, fab: false, fat: false, ship: false }
+        }));
+        setProjects(transformedProjects);
+      } else {
+        // If no projects in database, seed with initial data
+        await seedInitialData();
+      }
+
+      // Load changelog
+      const { data: changelogData, error: changelogError } = await supabase
+        .from('changelog')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (changelogError) {
+        console.error('Error loading changelog:', changelogError);
+      } else if (changelogData) {
+        const transformedChangelog = changelogData.map(c => ({
+          id: c.id,
+          timestamp: c.timestamp,
+          userEmail: c.user_email,
+          projectId: c.project_id,
+          projectInfo: c.project_info,
+          action: c.action,
+          changes: c.changes
+        }));
+        setChangeLog(transformedChangelog);
+      }
+
+      setLoading(false);
+    };
+
+    loadData();
+  }, []);
+
+  // Seed initial data to Supabase
+  const seedInitialData = async () => {
+    const projectsToInsert = INITIAL_DATA.map(p => ({
+      id: p.id,
+      category: p.category,
+      utility: p.utility,
+      substation: p.substation,
+      date_created: p.dateCreated,
+      order_number: p.order,
+      fat_date: p.fatDate,
+      landing: p.landing,
+      status: p.status,
+      progress: p.progress,
+      lead: p.lead,
+      description: p.description,
+      comments: p.comments,
+      milestones: p.milestones
+    }));
+
+    const { data, error } = await supabase
+      .from('projects')
+      .insert(projectsToInsert)
+      .select();
+
+    if (error) {
+      console.error('Error seeding data:', error);
+    } else if (data) {
+      const transformedProjects = data.map(p => ({
+        id: p.id,
+        category: p.category,
+        utility: p.utility,
+        substation: p.substation,
+        dateCreated: p.date_created,
+        order: p.order_number,
+        fatDate: p.fat_date || 'N/A',
+        landing: p.landing || 'TBD',
+        status: p.status,
+        progress: p.progress,
+        lead: p.lead || 'TBD',
+        description: p.description || '',
+        comments: p.comments || '',
+        milestones: p.milestones || { design: false, mat: false, fab: false, fat: false, ship: false }
+      }));
+      setProjects(transformedProjects);
+    }
+  };
 
   const handleLogin = (email: string) => {
     setCurrentUser(email);
@@ -76,30 +173,91 @@ const App: React.FC = () => {
     localStorage.removeItem('mac_user');
   };
 
-  const handleAddProject = (newProject: Project) => {
-    setProjects(prev => [...prev, newProject]);
+  const handleAddProject = async (newProject: Project) => {
+    // Insert project to Supabase
+    const { data: projectData, error: projectError } = await supabase
+      .from('projects')
+      .insert({
+        category: newProject.category,
+        utility: newProject.utility,
+        substation: newProject.substation,
+        date_created: newProject.dateCreated,
+        order_number: newProject.order,
+        fat_date: newProject.fatDate,
+        landing: newProject.landing,
+        status: newProject.status,
+        progress: newProject.progress,
+        lead: newProject.lead,
+        description: newProject.description,
+        comments: newProject.comments,
+        milestones: newProject.milestones
+      })
+      .select()
+      .single();
+
+    if (projectError) {
+      console.error('Error adding project:', projectError);
+      return;
+    }
+
+    // Transform and add to local state
+    const transformedProject = {
+      id: projectData.id,
+      category: projectData.category,
+      utility: projectData.utility,
+      substation: projectData.substation,
+      dateCreated: projectData.date_created,
+      order: projectData.order_number,
+      fatDate: projectData.fat_date || 'N/A',
+      landing: projectData.landing || 'TBD',
+      status: projectData.status,
+      progress: projectData.progress,
+      lead: projectData.lead || 'TBD',
+      description: projectData.description || '',
+      comments: projectData.comments || '',
+      milestones: projectData.milestones || { design: false, mat: false, fab: false, fat: false, ship: false }
+    };
+
+    setProjects(prev => [...prev, transformedProject]);
     setShowNewProjectModal(false);
 
-    // Log the creation
-    const newLog: ChangeLogEntry = {
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: new Date().toLocaleString(),
-      userEmail: currentUser || 'Unknown',
-      projectId: newProject.id,
-      projectInfo: `${newProject.utility} - ${newProject.substation}`,
-      action: 'Created New Project',
-      changes: `Order: ${newProject.order} | Category: ${newProject.category} | Status: ${newProject.status}`
-    };
-    setChangeLog(prev => [newLog, ...prev]);
+    // Log the creation to Supabase
+    const { data: logData, error: logError } = await supabase
+      .from('changelog')
+      .insert({
+        timestamp: new Date().toLocaleString(),
+        user_email: currentUser || 'Unknown',
+        project_id: projectData.id,
+        project_info: `${newProject.utility} - ${newProject.substation}`,
+        action: 'Created New Project',
+        changes: `Order: ${newProject.order} | Category: ${newProject.category} | Status: ${newProject.status}`
+      })
+      .select()
+      .single();
+
+    if (logError) {
+      console.error('Error logging change:', logError);
+    } else if (logData) {
+      const newLog: ChangeLogEntry = {
+        id: logData.id,
+        timestamp: logData.timestamp,
+        userEmail: logData.user_email,
+        projectId: logData.project_id,
+        projectInfo: logData.project_info,
+        action: logData.action,
+        changes: logData.changes
+      };
+      setChangeLog(prev => [newLog, ...prev]);
+    }
   };
 
-  const handleSaveProject = (updated: Project) => {
+  const handleSaveProject = async (updated: Project) => {
     const original = projects.find(p => p.id === updated.id);
     if (!original) return;
 
     // Record change log for ALL fields
     const diffs: string[] = [];
-    
+
     // Check top-level fields
     const fieldsToTrack: (keyof Project)[] = [
       'status', 'progress', 'lead', 'fatDate', 'landing', 'description', 'comments'
@@ -111,7 +269,7 @@ const App: React.FC = () => {
         diffs.push(`${label}: "${original[field]}" -> "${updated[field]}"`);
       }
     });
-    
+
     // Milestone diffs
     const mKeys = Object.keys(original.milestones) as (keyof Milestones)[];
     mKeys.forEach(k => {
@@ -122,17 +280,60 @@ const App: React.FC = () => {
       }
     });
 
+    // Update project in Supabase
+    const { error: updateError } = await supabase
+      .from('projects')
+      .update({
+        category: updated.category,
+        utility: updated.utility,
+        substation: updated.substation,
+        date_created: updated.dateCreated,
+        order_number: updated.order,
+        fat_date: updated.fatDate,
+        landing: updated.landing,
+        status: updated.status,
+        progress: updated.progress,
+        lead: updated.lead,
+        description: updated.description,
+        comments: updated.comments,
+        milestones: updated.milestones
+      })
+      .eq('id', updated.id);
+
+    if (updateError) {
+      console.error('Error updating project:', updateError);
+      return;
+    }
+
     if (diffs.length > 0) {
-      const newLog: ChangeLogEntry = {
-        id: Math.random().toString(36).substr(2, 9),
-        timestamp: new Date().toLocaleString(),
-        userEmail: currentUser || 'Unknown',
-        projectId: updated.id,
-        projectInfo: `${updated.utility} - ${updated.substation}`,
-        action: 'Updated Project Details',
-        changes: diffs.join(' | ')
-      };
-      setChangeLog(prev => [newLog, ...prev]);
+      // Log changes to Supabase
+      const { data: logData, error: logError } = await supabase
+        .from('changelog')
+        .insert({
+          timestamp: new Date().toLocaleString(),
+          user_email: currentUser || 'Unknown',
+          project_id: updated.id,
+          project_info: `${updated.utility} - ${updated.substation}`,
+          action: 'Updated Project Details',
+          changes: diffs.join(' | ')
+        })
+        .select()
+        .single();
+
+      if (logError) {
+        console.error('Error logging change:', logError);
+      } else if (logData) {
+        const newLog: ChangeLogEntry = {
+          id: logData.id,
+          timestamp: logData.timestamp,
+          userEmail: logData.user_email,
+          projectId: logData.project_id,
+          projectInfo: logData.project_info,
+          action: logData.action,
+          changes: logData.changes
+        };
+        setChangeLog(prev => [newLog, ...prev]);
+      }
     }
 
     setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -250,6 +451,19 @@ const App: React.FC = () => {
 
   if (!currentUser) {
     return <Login onLogin={handleLogin} />;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-mac-light">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img src="/mac_logo.png" alt="MAC Logo" className="w-full h-full object-contain animate-pulse" />
+          </div>
+          <p className="text-slate-600 font-medium">Loading projects...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
