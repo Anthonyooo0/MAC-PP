@@ -33,8 +33,14 @@ import { NewProjectModal } from './components/NewProjectModal';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
-  const [projects, setProjects] = useState<Project[]>(INITIAL_DATA);
-  const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>([]);
+  const [projects, setProjects] = useState<Project[]>(() => {
+    const saved = localStorage.getItem('mac_projects');
+    return saved ? JSON.parse(saved) : INITIAL_DATA;
+  });
+  const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>(() => {
+    const saved = localStorage.getItem('mac_changelog');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [activeTab, setActiveTab] = useState<ProjectCategory>('Pumping');
   const [searchTerm, setSearchTerm] = useState('');
@@ -44,11 +50,21 @@ const App: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
-  // Authentication persistence (mock)
+  // Authentication persistence
   useEffect(() => {
     const savedUser = localStorage.getItem('mac_user');
     if (savedUser) setCurrentUser(savedUser);
   }, []);
+
+  // Save projects to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('mac_projects', JSON.stringify(projects));
+  }, [projects]);
+
+  // Save changelog to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('mac_changelog', JSON.stringify(changeLog));
+  }, [changeLog]);
 
   const handleLogin = (email: string) => {
     setCurrentUser(email);
