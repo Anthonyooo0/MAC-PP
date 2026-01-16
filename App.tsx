@@ -300,13 +300,9 @@ const App: React.FC = () => {
       lead: updated.lead,
       description: updated.description,
       comments: updated.comments,
-      milestones: updated.milestones
+      milestones: updated.milestones,
+      punch_list: updated.punchList || []
     };
-
-    // Only include punch_list if the project has punch list items
-    if (updated.punchList && updated.punchList.length > 0) {
-      updateData.punch_list = updated.punchList;
-    }
 
     const { error: updateError } = await supabase
       .from('projects')
