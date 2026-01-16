@@ -10,10 +10,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
+  const authorizedUsers = [
+    'juan.ortiz@macproducts.net',
+    'anthony.haberle@macproducts.net',
+    'anthony.jimenez@macproducts.net',
+    'chirag.patel@macproducts.net',
+  ];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.toLowerCase().trim();
-    if (cleanEmail === 'juan.ortiz@macproducts.net' && password === 'MAC') {
+    if (authorizedUsers.includes(cleanEmail) && password === 'MAC') {
       onLogin(cleanEmail);
     } else {
       setError('Invalid email or password. Please use authorized credentials.');
