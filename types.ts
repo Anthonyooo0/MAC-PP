@@ -7,7 +7,13 @@ export interface Milestones {
   ship: boolean;
 }
 
-export type ProjectStatus = 'Active' | 'Critical' | 'Late' | 'Done';
+export interface PunchListItem {
+  id: string;
+  description: string;
+  completed: boolean;
+}
+
+export type ProjectStatus = 'Active' | 'Critical' | 'Late' | 'FAT' | 'Done';
 export type ProjectCategory = 'Pumping' | 'Field Service' | 'EHV';
 
 export interface Project {
@@ -25,6 +31,7 @@ export interface Project {
   description: string;
   comments: string;
   milestones: Milestones;
+  punchList?: PunchListItem[];
 }
 
 export interface ChangeLogEntry {
@@ -37,4 +44,4 @@ export interface ChangeLogEntry {
   changes: string;
 }
 
-export type ViewMode = 'dashboard' | 'list' | 'calendar' | 'changelog';
+export type ViewMode = 'dashboard' | 'list' | 'calendar' | 'punchlist' | 'changelog';

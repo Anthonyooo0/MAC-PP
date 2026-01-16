@@ -90,6 +90,7 @@ export const NewProjectModal: React.FC<NewProjectModalProps> = ({ onSave, onCanc
                 <option value="Active">Active</option>
                 <option value="Critical">Critical</option>
                 <option value="Late">Late</option>
+                <option value="FAT">FAT</option>
                 <option value="Done">Done</option>
               </select>
             </div>

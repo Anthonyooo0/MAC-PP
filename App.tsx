@@ -6,7 +6,8 @@ import {
   ViewMode,
   ProjectCategory,
   ChangeLogEntry,
-  Milestones
+  Milestones,
+  PunchListItem
 } from './types';
 import {
   INITIAL_DATA,
@@ -24,7 +25,8 @@ import {
   ZapIcon,
   EditIcon,
   LogoutIcon,
-  PlusIcon
+  PlusIcon,
+  ClipboardIcon
 } from './constants';
 import { Login } from './components/Login';
 import { MilestoneStepper } from './components/MilestoneStepper';
@@ -81,7 +83,8 @@ const App: React.FC = () => {
           lead: p.lead || 'TBD',
           description: p.description || '',
           comments: p.comments || '',
-          milestones: p.milestones || { design: false, mat: false, fab: false, fat: false, ship: false }
+          milestones: p.milestones || { design: false, mat: false, fab: false, fat: false, ship: false },
+          punchList: p.punch_list || []
         }));
         setProjects(transformedProjects);
       } else {
@@ -157,7 +160,8 @@ const App: React.FC = () => {
         lead: p.lead || 'TBD',
         description: p.description || '',
         comments: p.comments || '',
-        milestones: p.milestones || { design: false, mat: false, fab: false, fat: false, ship: false }
+        milestones: p.milestones || { design: false, mat: false, fab: false, fat: false, ship: false },
+        punchList: p.punch_list || []
       }));
       setProjects(transformedProjects);
     }
@@ -190,7 +194,8 @@ const App: React.FC = () => {
         lead: newProject.lead,
         description: newProject.description,
         comments: newProject.comments,
-        milestones: newProject.milestones
+        milestones: newProject.milestones,
+        punch_list: newProject.punchList || []
       })
       .select()
       .single();
@@ -215,7 +220,8 @@ const App: React.FC = () => {
       lead: projectData.lead || 'TBD',
       description: projectData.description || '',
       comments: projectData.comments || '',
-      milestones: projectData.milestones || { design: false, mat: false, fab: false, fat: false, ship: false }
+      milestones: projectData.milestones || { design: false, mat: false, fab: false, fat: false, ship: false },
+      punchList: projectData.punch_list || []
     };
 
     setProjects(prev => [...prev, transformedProject]);
@@ -296,7 +302,8 @@ const App: React.FC = () => {
         lead: updated.lead,
         description: updated.description,
         comments: updated.comments,
-        milestones: updated.milestones
+        milestones: updated.milestones,
+        punch_list: updated.punchList || []
       })
       .eq('id', updated.id);
 
@@ -339,6 +346,67 @@ const App: React.FC = () => {
     setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
     setEditingProject(null);
   };
+
+  // Toggle punch list item completion
+  const handleTogglePunchItem = async (projectId: number, itemId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !project.punchList) return;
+
+    const updatedPunchList = project.punchList.map(item =>
+      item.id === itemId ? { ...item, completed: !item.completed } : item
+    );
+
+    const toggledItem = project.punchList.find(i => i.id === itemId);
+    const newStatus = !toggledItem?.completed;
+
+    // Update in Supabase
+    const { error } = await supabase
+      .from('projects')
+      .update({ punch_list: updatedPunchList })
+      .eq('id', projectId);
+
+    if (error) {
+      console.error('Error updating punch list:', error);
+      return;
+    }
+
+    // Update local state
+    setProjects(prev => prev.map(p =>
+      p.id === projectId ? { ...p, punchList: updatedPunchList } : p
+    ));
+
+    // Log the change to audit log
+    const { data: logData, error: logError } = await supabase
+      .from('changelog')
+      .insert({
+        timestamp: new Date().toLocaleString(),
+        user_email: currentUser || 'Unknown',
+        project_id: projectId,
+        project_info: `${project.utility} - ${project.substation}`,
+        action: 'Punch List Updated',
+        changes: `"${toggledItem?.description}" marked as ${newStatus ? 'COMPLETED' : 'PENDING'}`
+      })
+      .select()
+      .single();
+
+    if (!logError && logData) {
+      const newLog: ChangeLogEntry = {
+        id: logData.id,
+        timestamp: logData.timestamp,
+        userEmail: logData.user_email,
+        projectId: logData.project_id,
+        projectInfo: logData.project_info,
+        action: logData.action,
+        changes: logData.changes
+      };
+      setChangeLog(prev => [newLog, ...prev]);
+    }
+  };
+
+  // Get FAT projects with punch lists
+  const fatProjectsWithPunchList = useMemo(() => {
+    return projects.filter(p => p.status === 'FAT' && p.punchList && p.punchList.length > 0);
+  }, [projects]);
 
   // --- Filtering ---
   const filteredProjects = useMemo(() => {
@@ -489,22 +557,30 @@ const App: React.FC = () => {
             <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">Navigation</span>
           </div>
           {[
-            { id: 'dashboard', label: 'Pipeline', icon: DashboardIcon },
-            { id: 'list', label: 'Projects', icon: ListIcon },
-            { id: 'calendar', label: 'Calendar', icon: CalendarIcon },
-            { id: 'changelog', label: 'Audit Log', icon: LogIcon },
+            { id: 'dashboard', label: 'Pipeline', icon: DashboardIcon, badge: 0 },
+            { id: 'list', label: 'Projects', icon: ListIcon, badge: 0 },
+            { id: 'calendar', label: 'Calendar', icon: CalendarIcon, badge: 0 },
+            { id: 'punchlist', label: 'Punch List', icon: ClipboardIcon, badge: fatProjectsWithPunchList.length },
+            { id: 'changelog', label: 'Audit Log', icon: LogIcon, badge: 0 },
           ].map(item => (
             <button
               key={item.id}
               onClick={() => setViewMode(item.id as ViewMode)}
               className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-all
-                ${viewMode === item.id 
-                  ? 'nav-active text-white bg-white/10' 
+                ${viewMode === item.id
+                  ? 'nav-active text-white bg-white/10'
                   : 'text-blue-200 hover:text-white hover:bg-white/5'
                 }`}
             >
               <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+              {!sidebarCollapsed && (
+                <span className="font-medium flex-1 text-left">{item.label}</span>
+              )}
+              {!sidebarCollapsed && item.badge > 0 && (
+                <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {item.badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -535,6 +611,7 @@ const App: React.FC = () => {
               {viewMode === 'dashboard' && 'Operations Pipeline'}
               {viewMode === 'list' && `${activeTab} Inventory`}
               {viewMode === 'calendar' && 'Project Schedule'}
+              {viewMode === 'punchlist' && 'FAT Punch Lists'}
               {viewMode === 'changelog' && 'System Audit Log'}
             </h2>
           </div>
@@ -647,6 +724,89 @@ const App: React.FC = () => {
                     </div>
                  ))}
                </div>
+            </div>
+          )}
+
+          {/* PUNCH LIST VIEW */}
+          {viewMode === 'punchlist' && (
+            <div className="space-y-6 view-transition">
+              {fatProjectsWithPunchList.length === 0 ? (
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-12 text-center">
+                  <ClipboardIcon className="w-12 h-12 mx-auto text-slate-300 mb-4" />
+                  <h3 className="text-lg font-bold text-slate-600 mb-2">No FAT Punch Lists</h3>
+                  <p className="text-slate-400 text-sm">
+                    Projects with FAT status and punch list items will appear here.
+                    <br />
+                    Set a project's status to "FAT" and add punch list items to see them.
+                  </p>
+                </div>
+              ) : (
+                fatProjectsWithPunchList.map(project => (
+                  <div key={project.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    {/* Project Header */}
+                    <div className="px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-bold text-lg">{project.utility} - {project.substation}</h3>
+                          <p className="text-orange-100 text-sm">Order #{project.order} | Lead: {project.lead}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">
+                            {project.punchList?.filter(i => i.completed).length} / {project.punchList?.length} Complete
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Punch List Items - Vertical with checkmarks */}
+                    <div className="p-6">
+                      <div className="space-y-3">
+                        {project.punchList?.map((item, idx) => (
+                          <div
+                            key={item.id}
+                            className={`flex items-start gap-4 p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                              item.completed
+                                ? 'bg-green-50 border-green-200'
+                                : 'bg-slate-50 border-slate-200 hover:border-orange-300'
+                            }`}
+                            onClick={() => handleTogglePunchItem(project.id, item.id)}
+                          >
+                            {/* Vertical stepper-style checkbox */}
+                            <div className="flex flex-col items-center">
+                              <div
+                                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                                  item.completed
+                                    ? 'bg-green-500 border-green-500 text-white'
+                                    : 'bg-white border-slate-300 text-slate-400'
+                                }`}
+                              >
+                                {item.completed ? (
+                                  <CheckIcon className="w-5 h-5" />
+                                ) : (
+                                  <span className="text-xs font-bold">{idx + 1}</span>
+                                )}
+                              </div>
+                              {idx < (project.punchList?.length || 0) - 1 && (
+                                <div className={`w-0.5 h-6 mt-2 ${item.completed ? 'bg-green-300' : 'bg-slate-200'}`} />
+                              )}
+                            </div>
+
+                            {/* Item description */}
+                            <div className="flex-1 pt-1">
+                              <p className={`font-medium ${item.completed ? 'text-green-700 line-through' : 'text-slate-700'}`}>
+                                {item.description}
+                              </p>
+                              <p className="text-xs text-slate-400 mt-1">
+                                {item.completed ? 'Completed - Click to reopen' : 'Click to mark as complete'}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
 

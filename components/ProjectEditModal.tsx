@@ -1,10 +1,10 @@
 
 import React, { useState } from 'react';
-import { Project, Milestones } from '../types';
+import { Project, Milestones, PunchListItem } from '../types';
 // Fixed: Removed non-existent SaveIcon import from MilestoneStepper
 import { MilestoneStepper } from './MilestoneStepper';
 // Reuse MilestoneStepper and Icons
-import { SaveIcon as SaveSvg } from '../constants';
+import { SaveIcon as SaveSvg, PlusIcon, CheckIcon } from '../constants';
 
 interface ProjectEditModalProps {
   project: Project;
@@ -14,6 +14,7 @@ interface ProjectEditModalProps {
 
 export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onSave, onCancel }) => {
   const [form, setForm] = useState<Project>({ ...project });
+  const [newPunchItem, setNewPunchItem] = useState('');
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -23,6 +24,36 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
     setForm(prev => ({
       ...prev,
       milestones: { ...prev.milestones, [key]: value }
+    }));
+  };
+
+  const handleAddPunchItem = () => {
+    if (!newPunchItem.trim()) return;
+    const newItem: PunchListItem = {
+      id: Math.random().toString(36).substr(2, 9),
+      description: newPunchItem.trim(),
+      completed: false
+    };
+    setForm(prev => ({
+      ...prev,
+      punchList: [...(prev.punchList || []), newItem]
+    }));
+    setNewPunchItem('');
+  };
+
+  const handleRemovePunchItem = (itemId: string) => {
+    setForm(prev => ({
+      ...prev,
+      punchList: (prev.punchList || []).filter(item => item.id !== itemId)
+    }));
+  };
+
+  const handleTogglePunchItem = (itemId: string) => {
+    setForm(prev => ({
+      ...prev,
+      punchList: (prev.punchList || []).map(item =>
+        item.id === itemId ? { ...item, completed: !item.completed } : item
+      )
     }));
   };
 
@@ -54,14 +85,15 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
-              <select 
-                value={form.status} 
-                onChange={(e) => handleFieldChange('status', e.target.value)} 
+              <select
+                value={form.status}
+                onChange={(e) => handleFieldChange('status', e.target.value)}
                 className="w-full p-2.5 bg-white border border-slate-300 rounded-lg focus:border-mac-accent outline-none"
               >
                 <option value="Active">Active</option>
                 <option value="Critical">Critical</option>
                 <option value="Late">Late</option>
+                <option value="FAT">FAT</option>
                 <option value="Done">Done</option>
               </select>
             </div>
@@ -93,6 +125,74 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Comments / Notes</label>
             <textarea value={form.comments} onChange={(e) => handleFieldChange('comments', e.target.value)} rows={3} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm" />
           </div>
+
+          {/* Punch List Section - Shows when status is FAT */}
+          {form.status === 'FAT' && (
+            <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
+              <div className="flex justify-between items-center mb-4">
+                <h4 className="text-xs font-bold text-orange-700 uppercase tracking-wider">FAT Punch List</h4>
+                <span className="text-[10px] text-orange-600 bg-orange-100 px-2 py-1 rounded font-semibold">
+                  {(form.punchList || []).filter(i => i.completed).length} / {(form.punchList || []).length} Complete
+                </span>
+              </div>
+
+              {/* Add new item */}
+              <div className="flex gap-2 mb-4">
+                <input
+                  type="text"
+                  value={newPunchItem}
+                  onChange={(e) => setNewPunchItem(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddPunchItem()}
+                  placeholder="Add punch list item..."
+                  className="flex-1 p-2.5 border border-orange-200 rounded-lg text-sm bg-white focus:border-orange-400 outline-none"
+                />
+                <button
+                  onClick={handleAddPunchItem}
+                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-sm flex items-center gap-1"
+                >
+                  <PlusIcon className="w-4 h-4" /> Add
+                </button>
+              </div>
+
+              {/* Punch list items */}
+              <div className="space-y-2">
+                {(form.punchList || []).length === 0 ? (
+                  <p className="text-sm text-orange-600 text-center py-4">No punch list items yet. Add items that need to be addressed after FAT.</p>
+                ) : (
+                  (form.punchList || []).map((item, idx) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                        item.completed
+                          ? 'bg-green-50 border-green-200'
+                          : 'bg-white border-orange-200'
+                      }`}
+                    >
+                      <button
+                        onClick={() => handleTogglePunchItem(item.id)}
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                          item.completed
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'bg-white border-slate-300 hover:border-orange-400'
+                        }`}
+                      >
+                        {item.completed && <CheckIcon className="w-4 h-4" />}
+                      </button>
+                      <span className={`flex-1 text-sm ${item.completed ? 'text-green-700 line-through' : 'text-slate-700'}`}>
+                        {item.description}
+                      </span>
+                      <button
+                        onClick={() => handleRemovePunchItem(item.id)}
+                        className="text-slate-400 hover:text-red-500 text-lg font-bold"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
         <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 rounded-b-xl">
           <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-white border border-slate-200 rounded-lg">Cancel</button>
