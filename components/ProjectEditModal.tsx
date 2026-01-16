@@ -1,10 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Project, Milestones, PunchListItem } from '../types';
-// Fixed: Removed non-existent SaveIcon import from MilestoneStepper
 import { MilestoneStepper } from './MilestoneStepper';
-// Reuse MilestoneStepper and Icons
-import { SaveIcon as SaveSvg, PlusIcon, CheckIcon } from '../constants';
+import { SaveIcon as SaveSvg, PlusIcon, CheckIcon, AlertIcon } from '../constants';
 
 interface ProjectEditModalProps {
   project: Project;
@@ -15,6 +13,22 @@ interface ProjectEditModalProps {
 export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onSave, onCancel }) => {
   const [form, setForm] = useState<Project>({ ...project });
   const [newPunchItem, setNewPunchItem] = useState('');
+  const [showFatNotice, setShowFatNotice] = useState(false);
+  const punchListRef = useRef<HTMLDivElement>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to punch list section when status changes to FAT
+  useEffect(() => {
+    if (form.status === 'FAT' && project.status !== 'FAT') {
+      setShowFatNotice(true);
+      // Wait for the punch list section to render, then scroll to it
+      setTimeout(() => {
+        if (punchListRef.current && modalContentRef.current) {
+          punchListRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+    }
+  }, [form.status, project.status]);
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -59,7 +73,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div ref={modalContentRef} className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <div className="p-5 border-b sticky top-0 bg-white z-10 flex justify-between items-center">
           <div>
             <h3 className="text-lg font-bold text-slate-800">Edit Project</h3>
@@ -128,7 +142,31 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
 
           {/* Punch List Section - Shows when status is FAT */}
           {form.status === 'FAT' && (
-            <div className="bg-orange-50 p-4 rounded-xl border border-orange-200">
+            <div
+              ref={punchListRef}
+              className={`p-4 rounded-xl border-2 transition-all duration-500 ${
+                showFatNotice
+                  ? 'bg-orange-100 border-orange-400 ring-4 ring-orange-200 animate-pulse'
+                  : 'bg-orange-50 border-orange-200'
+              }`}
+            >
+              {/* Notice banner when first changing to FAT */}
+              {showFatNotice && (
+                <div className="bg-orange-500 text-white p-3 rounded-lg mb-4 flex items-center gap-3">
+                  <AlertIcon className="w-5 h-5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-bold text-sm">FAT Status Selected</p>
+                    <p className="text-xs text-orange-100">Add punch list items below. This project will appear in the Punch List navigation once items are added.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowFatNotice(false)}
+                    className="text-orange-200 hover:text-white text-lg font-bold"
+                  >
+                    &times;
+                  </button>
+                </div>
+              )}
+
               <div className="flex justify-between items-center mb-4">
                 <h4 className="text-xs font-bold text-orange-700 uppercase tracking-wider">FAT Punch List</h4>
                 <span className="text-[10px] text-orange-600 bg-orange-100 px-2 py-1 rounded font-semibold">
