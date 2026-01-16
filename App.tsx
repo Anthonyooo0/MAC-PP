@@ -8,14 +8,14 @@ import {
   ChangeLogEntry,
   Milestones
 } from './types';
-import { 
-  INITIAL_DATA, 
-  DashboardIcon, 
-  ListIcon, 
-  CalendarIcon, 
+import {
+  INITIAL_DATA,
+  DashboardIcon,
+  ListIcon,
+  CalendarIcon,
   LogIcon,
-  SearchIcon, 
-  FilterIcon, 
+  SearchIcon,
+  FilterIcon,
   ChevronDownIcon,
   AlertIcon,
   CheckIcon,
@@ -23,11 +23,13 @@ import {
   ToolIcon,
   ZapIcon,
   EditIcon,
-  LogoutIcon
+  LogoutIcon,
+  PlusIcon
 } from './constants';
 import { Login } from './components/Login';
 import { MilestoneStepper } from './components/MilestoneStepper';
 import { ProjectEditModal } from './components/ProjectEditModal';
+import { NewProjectModal } from './components/NewProjectModal';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -40,6 +42,7 @@ const App: React.FC = () => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
   // Authentication persistence (mock)
   useEffect(() => {
@@ -55,6 +58,23 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('mac_user');
+  };
+
+  const handleAddProject = (newProject: Project) => {
+    setProjects(prev => [...prev, newProject]);
+    setShowNewProjectModal(false);
+
+    // Log the creation
+    const newLog: ChangeLogEntry = {
+      id: Math.random().toString(36).substr(2, 9),
+      timestamp: new Date().toLocaleString(),
+      userEmail: currentUser || 'Unknown',
+      projectId: newProject.id,
+      projectInfo: `${newProject.utility} - ${newProject.substation}`,
+      action: 'Created New Project',
+      changes: `Order: ${newProject.order} | Category: ${newProject.category} | Status: ${newProject.status}`
+    };
+    setChangeLog(prev => [newLog, ...prev]);
   };
 
   const handleSaveProject = (updated: Project) => {
@@ -331,6 +351,13 @@ const App: React.FC = () => {
                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
                   <div className="px-5 py-4 border-b bg-slate-50 flex justify-between items-center">
                     <h3 className="font-bold text-slate-700 text-sm">Financial Tracking Pipeline</h3>
+                    <button
+                      onClick={() => setShowNewProjectModal(true)}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-mac-navy hover:bg-mac-blue text-white rounded-lg text-xs font-bold transition-all shadow-sm"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      New Project
+                    </button>
                   </div>
                   <div className="divide-y divide-slate-100">
                     {projects.map(p => (
@@ -554,10 +581,19 @@ const App: React.FC = () => {
 
       {/* EDIT MODAL */}
       {editingProject && (
-        <ProjectEditModal 
+        <ProjectEditModal
           project={editingProject}
           onSave={handleSaveProject}
           onCancel={() => setEditingProject(null)}
+        />
+      )}
+
+      {/* NEW PROJECT MODAL */}
+      {showNewProjectModal && (
+        <NewProjectModal
+          onSave={handleAddProject}
+          onCancel={() => setShowNewProjectModal(false)}
+          nextId={Math.max(...projects.map(p => p.id)) + 1}
         />
       )}
     </div>
