@@ -140,7 +140,12 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
             <textarea value={form.comments} onChange={(e) => handleFieldChange('comments', e.target.value)} rows={3} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm" />
           </div>
 
-          {/* Punch List Section - Shows immediately when status is FAT - v2 */}
+          {/* Debug: Show current status */}
+          <div className="p-3 bg-blue-100 border border-blue-300 rounded-lg text-sm">
+            <strong>Debug:</strong> Current status = "{form.status}" | Is FAT? {form.status === 'FAT' ? 'YES' : 'NO'}
+          </div>
+
+          {/* Punch List Section - Shows immediately when status is FAT - v3 */}
           {form.status === 'FAT' && (
             <div
               ref={punchListRef}
