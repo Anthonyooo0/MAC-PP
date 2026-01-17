@@ -13,7 +13,7 @@ export interface PunchListItem {
   completed: boolean;
 }
 
-export type ProjectStatus = 'Active' | 'Critical' | 'Late' | 'FAT' | 'Done';
+export type ProjectStatus = 'Active' | 'Critical' | 'Late' | 'Done';
 export type ProjectCategory = 'Pumping' | 'Field Service' | 'EHV';
 
 export interface Project {

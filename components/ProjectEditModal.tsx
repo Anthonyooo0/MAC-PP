@@ -17,9 +17,9 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
   const punchListRef = useRef<HTMLDivElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to punch list section when status changes to FAT
+  // Auto-scroll to punch list section when FAT milestone is checked
   useEffect(() => {
-    if (form.status === 'FAT' && project.status !== 'FAT') {
+    if (form.milestones.fat && !project.milestones.fat) {
       setShowFatNotice(true);
       // Wait for the punch list section to render, then scroll to it
       setTimeout(() => {
@@ -28,7 +28,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
         }
       }, 100);
     }
-  }, [form.status, project.status]);
+  }, [form.milestones.fat, project.milestones.fat]);
 
   const handleFieldChange = (field: keyof Project, value: any) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -107,7 +107,6 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
                 <option value="Active">Active</option>
                 <option value="Critical">Critical</option>
                 <option value="Late">Late</option>
-                <option value="FAT">FAT</option>
                 <option value="Done">Done</option>
               </select>
             </div>
@@ -140,13 +139,8 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
             <textarea value={form.comments} onChange={(e) => handleFieldChange('comments', e.target.value)} rows={3} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm" />
           </div>
 
-          {/* Debug: Show current status */}
-          <div className="p-3 bg-blue-100 border border-blue-300 rounded-lg text-sm">
-            <strong>Debug:</strong> Current status = "{form.status}" | Is FAT? {form.status === 'FAT' ? 'YES' : 'NO'}
-          </div>
-
-          {/* Punch List Section - Shows immediately when status is FAT - v3 */}
-          {form.status === 'FAT' && (
+          {/* Punch List Section - Shows when FAT milestone is checked */}
+          {form.milestones.fat && (
             <div
               ref={punchListRef}
               className={`p-4 rounded-xl border-2 transition-all duration-500 ${
@@ -160,7 +154,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
                 <div className="bg-orange-500 text-white p-3 rounded-lg mb-4 flex items-center gap-3">
                   <AlertIcon className="w-5 h-5 flex-shrink-0" />
                   <div className="flex-1">
-                    <p className="font-bold text-sm">FAT Status Selected</p>
+                    <p className="font-bold text-sm">FAT Milestone Completed</p>
                     <p className="text-xs text-orange-100">Add punch list items below. This project will appear in the Punch List navigation once items are added.</p>
                   </div>
                   <button

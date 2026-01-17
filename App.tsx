@@ -411,9 +411,9 @@ const App: React.FC = () => {
     }
   };
 
-  // Get FAT projects with punch lists
+  // Get projects with FAT milestone completed and punch lists
   const fatProjectsWithPunchList = useMemo(() => {
-    return projects.filter(p => p.status === 'FAT' && p.punchList && p.punchList.length > 0);
+    return projects.filter(p => p.milestones.fat && p.punchList && p.punchList.length > 0);
   }, [projects]);
 
   // --- Filtering ---
