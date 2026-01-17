@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Project, Milestones, PunchListItem } from '../types';
 import { MilestoneStepper } from './MilestoneStepper';
-import { SaveIcon as SaveSvg, PlusIcon, CheckIcon, AlertIcon } from '../constants';
+import { SaveIcon as SaveSvg, PlusIcon, CheckIcon } from '../constants';
 
 interface ProjectEditModalProps {
   project: Project;
@@ -13,14 +13,12 @@ interface ProjectEditModalProps {
 export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onSave, onCancel }) => {
   const [form, setForm] = useState<Project>({ ...project });
   const [newPunchItem, setNewPunchItem] = useState('');
-  const [showFatNotice, setShowFatNotice] = useState(false);
   const punchListRef = useRef<HTMLDivElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to punch list section when FAT milestone is checked
   useEffect(() => {
     if (form.milestones.fat && !project.milestones.fat) {
-      setShowFatNotice(true);
       // Wait for the punch list section to render, then scroll to it
       setTimeout(() => {
         if (punchListRef.current && modalContentRef.current) {
@@ -143,32 +141,11 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
           {form.milestones.fat && (
             <div
               ref={punchListRef}
-              className={`p-4 rounded-xl border-2 transition-all duration-500 ${
-                showFatNotice
-                  ? 'bg-orange-100 border-orange-400 ring-4 ring-orange-200 animate-pulse'
-                  : 'bg-orange-50 border-orange-200'
-              }`}
+              className="p-4 rounded-xl border-2 bg-slate-50 border-slate-200"
             >
-              {/* Notice banner when first changing to FAT */}
-              {showFatNotice && (
-                <div className="bg-orange-500 text-white p-3 rounded-lg mb-4 flex items-center gap-3">
-                  <AlertIcon className="w-5 h-5 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="font-bold text-sm">FAT Milestone Completed</p>
-                    <p className="text-xs text-orange-100">Add punch list items below. This project will appear in the Punch List navigation once items are added.</p>
-                  </div>
-                  <button
-                    onClick={() => setShowFatNotice(false)}
-                    className="text-orange-200 hover:text-white text-lg font-bold"
-                  >
-                    &times;
-                  </button>
-                </div>
-              )}
-
               <div className="flex justify-between items-center mb-4">
-                <h4 className="text-xs font-bold text-orange-700 uppercase tracking-wider">FAT Punch List</h4>
-                <span className="text-[10px] text-orange-600 bg-orange-100 px-2 py-1 rounded font-semibold">
+                <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">FAT Punch List</h4>
+                <span className="text-[10px] text-slate-500 bg-slate-100 px-2 py-1 rounded font-semibold">
                   {(form.punchList || []).filter(i => i.completed).length} / {(form.punchList || []).length} Complete
                 </span>
               </div>
@@ -181,11 +158,11 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
                   onChange={(e) => setNewPunchItem(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddPunchItem()}
                   placeholder="Add punch list item..."
-                  className="flex-1 p-2.5 border border-orange-200 rounded-lg text-sm bg-white focus:border-orange-400 outline-none"
+                  className="flex-1 p-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:border-mac-accent outline-none"
                 />
                 <button
                   onClick={handleAddPunchItem}
-                  className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-sm flex items-center gap-1"
+                  className="px-4 py-2 bg-mac-accent hover:bg-mac-blue text-white rounded-lg font-bold text-sm flex items-center gap-1"
                 >
                   <PlusIcon className="w-4 h-4" /> Add
                 </button>
@@ -194,7 +171,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
               {/* Punch list items */}
               <div className="space-y-2">
                 {(form.punchList || []).length === 0 ? (
-                  <p className="text-sm text-orange-600 text-center py-4">No punch list items yet. Add items that need to be addressed after FAT.</p>
+                  <p className="text-sm text-slate-500 text-center py-4">No punch list items yet. Add items that need to be addressed after FAT.</p>
                 ) : (
                   (form.punchList || []).map((item, idx) => (
                     <div
@@ -202,7 +179,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
                       className={`flex items-center gap-3 p-3 rounded-lg border ${
                         item.completed
                           ? 'bg-green-50 border-green-200'
-                          : 'bg-white border-orange-200'
+                          : 'bg-white border-slate-200'
                       }`}
                     >
                       <button
@@ -210,7 +187,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
                         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                           item.completed
                             ? 'bg-green-500 border-green-500 text-white'
-                            : 'bg-white border-slate-300 hover:border-orange-400'
+                            : 'bg-white border-slate-300 hover:border-mac-accent'
                         }`}
                       >
                         {item.completed && <CheckIcon className="w-4 h-4" />}
