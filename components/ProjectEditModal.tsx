@@ -8,11 +8,13 @@ interface ProjectEditModalProps {
   project: Project;
   onSave: (updatedProject: Project) => void;
   onCancel: () => void;
+  onDelete: (projectId: number) => void;
 }
 
-export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onSave, onCancel }) => {
+export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onSave, onCancel, onDelete }) => {
   const [form, setForm] = useState<Project>({ ...project });
   const [newPunchItem, setNewPunchItem] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const punchListRef = useRef<HTMLDivElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
@@ -208,15 +210,49 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
             </div>
           )}
         </div>
-        <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 rounded-b-xl">
-          <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-white border border-slate-200 rounded-lg">Cancel</button>
-          <button 
-            onClick={() => onSave(form)} 
-            className="px-4 py-2 text-sm font-bold text-white bg-mac-accent hover:bg-mac-blue rounded-lg shadow-sm flex items-center gap-2"
+        <div className="p-4 border-t bg-slate-50 flex justify-between rounded-b-xl">
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 border border-red-200 rounded-lg"
           >
-            <SaveSvg className="h-4 w-4" /> Save Changes
+            Delete Project
           </button>
+          <div className="flex gap-2">
+            <button onClick={onCancel} className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-white border border-slate-200 rounded-lg">Cancel</button>
+            <button
+              onClick={() => onSave(form)}
+              className="px-4 py-2 text-sm font-bold text-white bg-mac-accent hover:bg-mac-blue rounded-lg shadow-sm flex items-center gap-2"
+            >
+              <SaveSvg className="h-4 w-4" /> Save Changes
+            </button>
+          </div>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full">
+              <h3 className="text-lg font-bold text-slate-800 mb-2">Delete Project?</h3>
+              <p className="text-sm text-slate-600 mb-4">
+                Are you sure you want to delete <strong>{project.utility} / {project.substation}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 border border-slate-200 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => onDelete(project.id)}
+                  className="px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

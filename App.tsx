@@ -286,6 +286,34 @@ const App: React.FC = () => {
       }
     });
 
+    // Punch list diffs
+    const origPunchList = original.punchList || [];
+    const updPunchList = updated.punchList || [];
+
+    // Check for added items
+    updPunchList.forEach(item => {
+      const exists = origPunchList.find(o => o.id === item.id);
+      if (!exists) {
+        diffs.push(`Punch List: Added "${item.description}"`);
+      }
+    });
+
+    // Check for removed items
+    origPunchList.forEach(item => {
+      const exists = updPunchList.find(u => u.id === item.id);
+      if (!exists) {
+        diffs.push(`Punch List: Removed "${item.description}"`);
+      }
+    });
+
+    // Check for toggled items
+    origPunchList.forEach(origItem => {
+      const updItem = updPunchList.find(u => u.id === origItem.id);
+      if (updItem && origItem.completed !== updItem.completed) {
+        diffs.push(`Punch List: "${updItem.description}" marked as ${updItem.completed ? 'COMPLETED' : 'PENDING'}`);
+      }
+    });
+
     // Update project in Supabase
     const updateData: any = {
       category: updated.category,
@@ -352,6 +380,55 @@ const App: React.FC = () => {
     }
 
     setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+    setEditingProject(null);
+  };
+
+  // Delete project
+  const handleDeleteProject = async (projectId: number) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    // Delete from Supabase
+    const { error: deleteError } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', projectId);
+
+    if (deleteError) {
+      console.error('Error deleting project:', deleteError);
+      alert('Error deleting project: ' + deleteError.message);
+      return;
+    }
+
+    // Log the deletion
+    const { data: logData, error: logError } = await supabase
+      .from('changelog')
+      .insert({
+        timestamp: new Date().toLocaleString(),
+        user_email: currentUser || 'Unknown',
+        project_id: projectId,
+        project_info: `${project.utility} - ${project.substation}`,
+        action: 'Project Deleted',
+        changes: `Deleted project: ${project.utility} / ${project.substation} (Order: ${project.order})`
+      })
+      .select()
+      .single();
+
+    if (!logError && logData) {
+      const newLog: ChangeLogEntry = {
+        id: logData.id,
+        timestamp: logData.timestamp,
+        userEmail: logData.user_email,
+        projectId: logData.project_id,
+        projectInfo: logData.project_info,
+        action: logData.action,
+        changes: logData.changes
+      };
+      setChangeLog(prev => [newLog, ...prev]);
+    }
+
+    // Update local state
+    setProjects(prev => prev.filter(p => p.id !== projectId));
     setEditingProject(null);
   };
 
@@ -983,6 +1060,7 @@ const App: React.FC = () => {
           project={editingProject}
           onSave={handleSaveProject}
           onCancel={() => setEditingProject(null)}
+          onDelete={handleDeleteProject}
         />
       )}
 
