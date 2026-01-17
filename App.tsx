@@ -662,7 +662,7 @@ const App: React.FC = () => {
                 <span className="font-medium flex-1 text-left">{item.label}</span>
               )}
               {!sidebarCollapsed && item.badge > 0 && (
-                <span className="bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                <span className="bg-mac-accent text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                   {item.badge}
                 </span>
               )}
@@ -829,11 +829,11 @@ const App: React.FC = () => {
                 fatProjectsWithPunchList.map(project => (
                   <div key={project.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                     {/* Project Header */}
-                    <div className="px-6 py-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white">
+                    <div className="px-6 py-4 bg-gradient-to-r from-mac-navy to-mac-blue text-white">
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="font-bold text-lg">{project.utility} - {project.substation}</h3>
-                          <p className="text-orange-100 text-sm">Order #{project.order} | Lead: {project.lead}</p>
+                          <p className="text-blue-200 text-sm">Order #{project.order} | Lead: {project.lead}</p>
                         </div>
                         <div className="text-right">
                           <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-bold">
@@ -852,7 +852,7 @@ const App: React.FC = () => {
                             className={`flex items-start gap-4 p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
                               item.completed
                                 ? 'bg-green-50 border-green-200'
-                                : 'bg-slate-50 border-slate-200 hover:border-orange-300'
+                                : 'bg-slate-50 border-slate-200 hover:border-mac-accent'
                             }`}
                             onClick={() => handleTogglePunchItem(project.id, item.id)}
                           >
