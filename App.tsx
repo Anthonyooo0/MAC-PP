@@ -952,13 +952,16 @@ const App: React.FC = () => {
                         >
                           <div className="flex justify-between items-start mb-1">
                             <span className="font-bold text-slate-800 truncate pr-2">{p.utility}</span>
-                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                            <span className="text-[10px] font-mono bg-slate-100 px-1 rounded text-slate-500 flex-shrink-0">{p.landing}</span>
+                          </div>
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-slate-600 truncate">{p.substation}</span>
+                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ml-1 ${
                               p.status === 'Critical' ? 'bg-red-500' :
                               p.status === 'Late' ? 'bg-orange-400' :
                               p.status === 'Done' ? 'bg-green-500' : 'bg-blue-500'
                             }`}></div>
                           </div>
-                          <div className="text-slate-600 truncate mb-2">{p.substation}</div>
                           {/* Mini Progress Bar */}
                           <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
                             <div className="bg-blue-500 h-full" style={{width: `${p.progress}%`}}></div>
