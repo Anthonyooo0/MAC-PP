@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMsal } from '@azure/msal-react';
 import { loginRequest, ALLOWED_DOMAIN } from '../authConfig';
 
@@ -7,34 +7,28 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const { instance } = useMsal();
+  const { instance, accounts, inProgress } = useMsal();
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleMicrosoftLogin = async () => {
-    setError('');
-    setIsLoading(true);
-
-    try {
-      const response = await instance.loginPopup(loginRequest);
-      const email = response.account?.username?.toLowerCase() || '';
-
-      // Verify the user is from the allowed domain
+  // Handle redirect result when page loads
+  useEffect(() => {
+    if (inProgress === 'none' && accounts.length > 0) {
+      const email = accounts[0].username?.toLowerCase() || '';
       if (email.endsWith(`@${ALLOWED_DOMAIN}`)) {
         onLogin(email);
       } else {
         setError(`Access denied. Only @${ALLOWED_DOMAIN} accounts are allowed.`);
-        await instance.logoutPopup();
+        instance.logoutRedirect();
       }
-    } catch (err: any) {
-      if (err.errorCode !== 'user_cancelled') {
-        setError('Login failed. Please try again.');
-        console.error('Login error:', err);
-      }
-    } finally {
-      setIsLoading(false);
     }
+  }, [accounts, inProgress, instance, onLogin]);
+
+  const handleMicrosoftLogin = () => {
+    setError('');
+    instance.loginRedirect(loginRequest);
   };
+
+  const isLoading = inProgress !== 'none';
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-mac-light px-4">
