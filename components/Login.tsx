@@ -1,29 +1,38 @@
-
 import React, { useState } from 'react';
+import { useMsal } from '@azure/msal-react';
+import { loginRequest, ALLOWED_DOMAIN } from '../authConfig';
 
 interface LoginProps {
   onLogin: (email: string) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { instance } = useMsal();
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const authorizedUsers = [
-    'juan.ortiz@macproducts.net',
-    'anthony.haberle@macproducts.net',
-    'anthony.jimenez@macproducts.net',
-    'chirag.patel@macproducts.net',
-  ];
+  const handleMicrosoftLogin = async () => {
+    setError('');
+    setIsLoading(true);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanEmail = email.toLowerCase().trim();
-    if (authorizedUsers.includes(cleanEmail) && password === 'MAC') {
-      onLogin(cleanEmail);
-    } else {
-      setError('Invalid email or password. Please use authorized credentials.');
+    try {
+      const response = await instance.loginPopup(loginRequest);
+      const email = response.account?.username?.toLowerCase() || '';
+
+      // Verify the user is from the allowed domain
+      if (email.endsWith(`@${ALLOWED_DOMAIN}`)) {
+        onLogin(email);
+      } else {
+        setError(`Access denied. Only @${ALLOWED_DOMAIN} accounts are allowed.`);
+        await instance.logoutPopup();
+      }
+    } catch (err: any) {
+      if (err.errorCode !== 'user_cancelled') {
+        setError('Login failed. Please try again.');
+        console.error('Login error:', err);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -34,34 +43,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <div className="inline-flex w-16 h-16 items-center justify-center mb-4">
             <img src="/mac_logo.png" alt="MAC Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-bold text-slate-800">Command Center Login</h1>
-          <p className="text-slate-500 text-sm mt-1">Enter your credentials to access the dashboard</p>
+          <h1 className="text-2xl font-bold text-slate-800">Command Center</h1>
+          <p className="text-slate-500 text-sm mt-1">Sign in with your MAC Products account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">MAC Email Address</label>
-            <input
-              type="email"
-              placeholder="user@macproducts.net"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-mac-accent focus:ring-2 focus:ring-mac-accent/20 outline-none transition-all"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Password</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:border-mac-accent focus:ring-2 focus:ring-mac-accent/20 outline-none transition-all"
-              required
-            />
-          </div>
-
+        <div className="space-y-6">
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm font-medium border border-red-100">
               {error}
@@ -69,12 +55,23 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           )}
 
           <button
-            type="submit"
-            className="w-full bg-mac-navy hover:bg-mac-blue text-white font-bold py-3 px-4 rounded-xl transition-all shadow-lg hover:shadow-mac-blue/20"
+            onClick={handleMicrosoftLogin}
+            disabled={isLoading}
+            className="w-full bg-[#2F2F2F] hover:bg-[#1F1F1F] text-white font-semibold py-3 px-4 rounded-xl transition-all shadow-lg flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isLoading ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+              </svg>
+            )}
+            {isLoading ? 'Signing in...' : 'Sign in with Microsoft'}
           </button>
-        </form>
+        </div>
 
         <div className="mt-8 pt-6 border-t border-slate-100 text-center">
           <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">

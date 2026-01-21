@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import {
   Project,
   ProjectStatus,
@@ -35,6 +36,8 @@ import { NewProjectModal } from './components/NewProjectModal';
 import { supabase } from './supabase';
 
 const App: React.FC = () => {
+  const { instance, accounts } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>([]);
@@ -47,11 +50,13 @@ const App: React.FC = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
-  // Authentication persistence
+  // Sync MSAL auth state with currentUser
   useEffect(() => {
-    const savedUser = localStorage.getItem('mac_user');
-    if (savedUser) setCurrentUser(savedUser);
-  }, []);
+    if (isAuthenticated && accounts.length > 0) {
+      const email = accounts[0].username?.toLowerCase() || null;
+      setCurrentUser(email);
+    }
+  }, [isAuthenticated, accounts]);
 
   // Load data from Supabase
   useEffect(() => {
@@ -168,12 +173,15 @@ const App: React.FC = () => {
 
   const handleLogin = (email: string) => {
     setCurrentUser(email);
-    localStorage.setItem('mac_user', email);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await instance.logoutPopup();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     setCurrentUser(null);
-    localStorage.removeItem('mac_user');
   };
 
   const handleAddProject = async (newProject: Project) => {
