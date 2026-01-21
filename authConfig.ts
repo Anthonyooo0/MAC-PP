@@ -31,7 +31,7 @@ export const msalConfig: Configuration = {
 
 // Scopes for the login request
 export const loginRequest = {
-  scopes: ["User.Read"],
+  scopes: [],
 };
 
 // Allowed domain for authentication
