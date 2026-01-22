@@ -861,7 +861,7 @@ const App: React.FC = () => {
                           </div>
 
                           {/* Description */}
-                          <div className="bg-blue-50 border-l-4 border-mac-accent p-4">
+                          <div className="border-l-4 border-mac-accent pl-4 py-1">
                             <p className="text-sm text-slate-600 leading-relaxed">{p.description || 'No description available.'}</p>
                           </div>
                         </div>
