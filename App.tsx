@@ -761,8 +761,8 @@ const App: React.FC = () => {
             <div className="space-y-6 view-transition">
                <div className="flex gap-4 border-b border-slate-200 pb-2">
                   {['Pumping', 'Field Service', 'EHV'].map(cat => (
-                    <button 
-                      key={cat} 
+                    <button
+                      key={cat}
                       onClick={() => setActiveTab(cat as ProjectCategory)}
                       className={`px-4 py-2 text-sm font-bold transition-all ${activeTab === cat ? 'text-mac-accent border-b-2 border-mac-accent' : 'text-slate-400 hover:text-slate-600'}`}
                     >
@@ -770,27 +770,113 @@ const App: React.FC = () => {
                     </button>
                   ))}
                </div>
-               <div className="grid grid-cols-1 gap-4">
+               <div className="grid grid-cols-1 gap-6">
                  {filteredProjects.map(p => (
-                    <div key={p.id} className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start gap-4 hover:border-mac-accent transition-all cursor-pointer" onClick={() => setEditingProject(p)}>
-                      <div className="flex-1">
-                        <div className="flex justify-between mb-2">
-                          <h3 className="font-bold text-slate-800">{p.utility} / {p.substation}</h3>
-                          <span className="text-xs font-mono text-slate-400">#{p.order}</span>
+                    <div
+                      key={p.id}
+                      className="bg-white rounded-xl border border-slate-200 shadow-sm hover:border-mac-accent hover:shadow-md transition-all cursor-pointer overflow-hidden"
+                      onClick={() => setEditingProject(p)}
+                    >
+                      {/* Header with status, title, lead and progress */}
+                      <div className="p-5 flex items-start gap-4">
+                        {/* Status Badge */}
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase whitespace-nowrap ${
+                          p.status === 'Critical' ? 'bg-red-500 text-white' :
+                          p.status === 'Late' ? 'bg-amber-500 text-white' :
+                          p.status === 'Done' ? 'bg-green-500 text-white' :
+                          'bg-blue-500 text-white'
+                        }`}>{p.status}</span>
+
+                        {/* Title */}
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-slate-800">{p.utility} / {p.substation}</h3>
                         </div>
-                        <p className="text-sm text-slate-500 mb-4 line-clamp-2">{p.description}</p>
-                        <div className="grid grid-cols-3 gap-4 bg-slate-50 p-3 rounded-lg text-[11px]">
-                          <div><span className="text-slate-400 uppercase font-bold block">Lead</span>{p.lead}</div>
-                          <div><span className="text-slate-400 uppercase font-bold block">Landing</span>{p.landing}</div>
-                          <div><span className="text-slate-400 uppercase font-bold block">FAT</span>{p.fatDate}</div>
+
+                        {/* Lead and Progress */}
+                        <div className="flex items-center gap-4 text-sm text-slate-500">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <span>{p.lead}</span>
+                          </div>
+                          <div className="bg-slate-100 px-3 py-1 rounded-full font-bold text-slate-600">{p.progress}%</div>
                         </div>
                       </div>
-                      <div className="w-48 flex flex-col items-end gap-2">
-                        <span className={`px-2 py-1 rounded text-[10px] font-bold border ${p.status === 'Critical' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-blue-50 text-mac-accent border-blue-200'}`}>{p.status}</span>
-                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-2">
-                          <div className="bg-mac-accent h-full" style={{width: `${p.progress}%`}} />
+
+                      {/* Milestone Stepper */}
+                      <div className="px-5 pb-4">
+                        <div className="flex items-center justify-between max-w-lg">
+                          {[
+                            { key: 'design', label: 'DESIGN' },
+                            { key: 'mat', label: 'MATL.' },
+                            { key: 'fab', label: 'FAB' },
+                            { key: 'fat', label: 'FAT' },
+                            { key: 'ship', label: 'DELIV.' }
+                          ].map((step, idx, arr) => (
+                            <React.Fragment key={step.key}>
+                              <div className="flex flex-col items-center">
+                                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                                  p.milestones[step.key as keyof Milestones]
+                                    ? 'bg-mac-accent border-mac-accent text-white'
+                                    : 'border-slate-300 text-slate-300'
+                                }`}>
+                                  {p.milestones[step.key as keyof Milestones] ? (
+                                    <CheckIcon className="w-4 h-4" />
+                                  ) : (
+                                    <div className="w-2 h-2 rounded-full bg-current" />
+                                  )}
+                                </div>
+                                <span className={`text-[10px] font-bold mt-1 ${
+                                  p.milestones[step.key as keyof Milestones] ? 'text-mac-accent' : 'text-slate-400'
+                                }`}>{step.label}</span>
+                              </div>
+                              {idx < arr.length - 1 && (
+                                <div className={`flex-1 h-0.5 mx-2 ${
+                                  p.milestones[step.key as keyof Milestones] ? 'bg-mac-accent' : 'bg-slate-200'
+                                }`} />
+                              )}
+                            </React.Fragment>
+                          ))}
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400">{p.progress}% Progress</span>
+                      </div>
+
+                      {/* Details Row */}
+                      <div className="px-5 pb-4">
+                        <div className="grid grid-cols-4 gap-4 text-[11px]">
+                          <div>
+                            <span className="text-slate-400 uppercase font-bold block mb-1">Created</span>
+                            <span className="text-slate-700 font-medium">{p.dateCreated || 'N/A'}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 uppercase font-bold block mb-1">FAT Date</span>
+                            <span className="text-slate-700 font-medium">{p.fatDate}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 uppercase font-bold block mb-1">Landing</span>
+                            <span className="text-slate-700 font-medium">{p.landing}</span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 uppercase font-bold block mb-1">Order #</span>
+                            <span className="text-slate-700 font-medium">{p.order}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Description and Latest Updates */}
+                      <div className="px-5 pb-5 flex gap-6">
+                        {/* Description */}
+                        <div className="flex-1 bg-blue-50 border-l-4 border-mac-accent p-4 rounded-r-lg">
+                          <p className="text-sm text-slate-600 leading-relaxed">{p.description || 'No description available.'}</p>
+                        </div>
+
+                        {/* Latest Updates */}
+                        <div className="w-80">
+                          <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Latest Updates</h4>
+                          <p className="text-sm text-slate-600 leading-relaxed line-clamp-5">
+                            {p.comments || 'No updates yet.'}
+                          </p>
+                        </div>
                       </div>
                     </div>
                  ))}
