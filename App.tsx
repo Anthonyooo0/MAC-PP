@@ -774,106 +774,102 @@ const App: React.FC = () => {
                  {filteredProjects.map(p => (
                     <div
                       key={p.id}
-                      className="bg-white rounded-xl border border-slate-200 shadow-sm hover:border-mac-accent hover:shadow-md transition-all cursor-pointer overflow-hidden"
+                      className={`bg-white rounded-lg shadow-sm hover:shadow-lg transition-all cursor-pointer overflow-hidden border border-slate-200 border-l-4 ${
+                        p.status === 'Critical' ? 'border-l-red-500' :
+                        p.status === 'Late' ? 'border-l-amber-400' :
+                        p.status === 'Done' ? 'border-l-green-500' :
+                        'border-l-blue-500'
+                      }`}
                       onClick={() => setEditingProject(p)}
                     >
-                      {/* Header with status, title, lead and progress */}
-                      <div className="p-5 flex items-start gap-4">
-                        {/* Status Badge */}
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase whitespace-nowrap ${
-                          p.status === 'Critical' ? 'bg-red-500 text-white' :
-                          p.status === 'Late' ? 'bg-amber-500 text-white' :
-                          p.status === 'Done' ? 'bg-green-500 text-white' :
-                          'bg-blue-500 text-white'
-                        }`}>{p.status}</span>
-
-                        {/* Title */}
-                        <div className="flex-1">
-                          <h3 className="text-lg font-bold text-slate-800">{p.utility} / {p.substation}</h3>
-                        </div>
-
-                        {/* Lead and Progress */}
-                        <div className="flex items-center gap-4 text-sm text-slate-500">
-                          <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <span>{p.lead}</span>
-                          </div>
-                          <div className="bg-slate-100 px-3 py-1 rounded-full font-bold text-slate-600">{p.progress}%</div>
-                        </div>
-                      </div>
-
-                      {/* Milestone Stepper */}
-                      <div className="px-5 pb-4">
-                        <div className="flex items-center justify-between max-w-lg">
-                          {[
-                            { key: 'design', label: 'DESIGN' },
-                            { key: 'mat', label: 'MATL.' },
-                            { key: 'fab', label: 'FAB' },
-                            { key: 'fat', label: 'FAT' },
-                            { key: 'ship', label: 'DELIV.' }
-                          ].map((step, idx, arr) => (
-                            <React.Fragment key={step.key}>
-                              <div className="flex flex-col items-center">
-                                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                                  p.milestones[step.key as keyof Milestones]
-                                    ? 'bg-mac-accent border-mac-accent text-white'
-                                    : 'border-slate-300 text-slate-300'
-                                }`}>
-                                  {p.milestones[step.key as keyof Milestones] ? (
-                                    <CheckIcon className="w-4 h-4" />
-                                  ) : (
-                                    <div className="w-2 h-2 rounded-full bg-current" />
-                                  )}
-                                </div>
-                                <span className={`text-[10px] font-bold mt-1 ${
-                                  p.milestones[step.key as keyof Milestones] ? 'text-mac-accent' : 'text-slate-400'
-                                }`}>{step.label}</span>
+                      <div className="flex">
+                        {/* Left Content */}
+                        <div className="flex-1 p-6">
+                          {/* Header with status, title, lead and progress */}
+                          <div className="flex items-center gap-4 mb-5">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                              p.status === 'Critical' ? 'bg-red-500 text-white' :
+                              p.status === 'Late' ? 'bg-amber-400 text-white' :
+                              p.status === 'Done' ? 'bg-green-500 text-white' :
+                              'bg-blue-500 text-white'
+                            }`}>{p.status}</span>
+                            <h3 className="text-xl font-bold text-slate-800 flex-1">{p.utility} / {p.substation}</h3>
+                            <div className="flex items-center gap-3 text-sm text-slate-500">
+                              <div className="flex items-center gap-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                </svg>
+                                <span>{p.lead}</span>
                               </div>
-                              {idx < arr.length - 1 && (
-                                <div className={`flex-1 h-0.5 mx-2 ${
-                                  p.milestones[step.key as keyof Milestones] ? 'bg-mac-accent' : 'bg-slate-200'
-                                }`} />
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      </div>
+                              <span className="bg-slate-100 px-3 py-1 rounded font-bold text-slate-700">{p.progress}%</span>
+                            </div>
+                          </div>
 
-                      {/* Details Row */}
-                      <div className="px-5 pb-4">
-                        <div className="grid grid-cols-4 gap-4 text-[11px]">
-                          <div>
-                            <span className="text-slate-400 uppercase font-bold block mb-1">Created</span>
-                            <span className="text-slate-700 font-medium">{p.dateCreated || 'N/A'}</span>
+                          {/* Milestone Stepper */}
+                          <div className="mb-6">
+                            <div className="flex items-center max-w-lg">
+                              {[
+                                { key: 'design', label: 'DESIGN' },
+                                { key: 'mat', label: 'MATL.' },
+                                { key: 'fab', label: 'FAB' },
+                                { key: 'fat', label: 'FAT' },
+                                { key: 'ship', label: 'DELIV.' }
+                              ].map((step, idx, arr) => (
+                                <React.Fragment key={step.key}>
+                                  <div className="flex flex-col items-center">
+                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
+                                      p.milestones[step.key as keyof Milestones]
+                                        ? 'bg-mac-accent border-mac-accent text-white'
+                                        : 'border-slate-300 bg-white'
+                                    }`}>
+                                      {p.milestones[step.key as keyof Milestones] && (
+                                        <CheckIcon className="w-4 h-4" />
+                                      )}
+                                    </div>
+                                    <span className={`text-[10px] font-bold mt-1 ${
+                                      p.milestones[step.key as keyof Milestones] ? 'text-mac-accent' : 'text-slate-400'
+                                    }`}>{step.label}</span>
+                                  </div>
+                                  {idx < arr.length - 1 && (
+                                    <div className={`flex-1 h-0.5 mx-2 -mt-3 ${
+                                      p.milestones[step.key as keyof Milestones] ? 'bg-mac-accent' : 'bg-slate-200'
+                                    }`} />
+                                  )}
+                                </React.Fragment>
+                              ))}
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-slate-400 uppercase font-bold block mb-1">FAT Date</span>
-                            <span className="text-slate-700 font-medium">{p.fatDate}</span>
+
+                          {/* Details Row */}
+                          <div className="grid grid-cols-4 gap-6 mb-5 pb-5 border-b border-slate-100">
+                            <div>
+                              <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Created</span>
+                              <span className="text-sm text-slate-700">{p.dateCreated || 'N/A'}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">FAT Date</span>
+                              <span className="text-sm text-slate-700">{p.fatDate}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Landing</span>
+                              <span className="text-sm text-slate-700">{p.landing}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Order #</span>
+                              <span className="text-sm text-slate-700">{p.order}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-slate-400 uppercase font-bold block mb-1">Landing</span>
-                            <span className="text-slate-700 font-medium">{p.landing}</span>
-                          </div>
-                          <div>
-                            <span className="text-slate-400 uppercase font-bold block mb-1">Order #</span>
-                            <span className="text-slate-700 font-medium">{p.order}</span>
+
+                          {/* Description */}
+                          <div className="bg-blue-50 border-l-4 border-mac-accent p-4">
+                            <p className="text-sm text-slate-600 leading-relaxed">{p.description || 'No description available.'}</p>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Description and Latest Updates */}
-                      <div className="px-5 pb-5 flex gap-6">
-                        {/* Description */}
-                        <div className="flex-1 bg-blue-50 border-l-4 border-mac-accent p-4 rounded-r-lg">
-                          <p className="text-sm text-slate-600 leading-relaxed">{p.description || 'No description available.'}</p>
-                        </div>
-
-                        {/* Latest Updates */}
-                        <div className="w-80">
-                          <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Latest Updates</h4>
-                          <p className="text-sm text-slate-600 leading-relaxed line-clamp-5">
+                        {/* Right Sidebar - Latest Updates */}
+                        <div className="w-72 bg-slate-50 border-l border-slate-200 p-5 flex flex-col">
+                          <h4 className="text-sm font-bold text-slate-700 uppercase mb-3">Latest Updates</h4>
+                          <p className="text-sm text-slate-600 leading-relaxed flex-1 whitespace-pre-line">
                             {p.comments || 'No updates yet.'}
                           </p>
                         </div>
