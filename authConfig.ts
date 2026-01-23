@@ -6,8 +6,8 @@ export const msalConfig: Configuration = {
   auth: {
     clientId: "77841c45-4e58-458c-87b3-43a5b6556811", // Application (client) ID from Azure Portal
     authority: "https://login.microsoftonline.com/422e0e56-e8fe-4fc5-8554-b9b89f3cadac", // Directory (tenant) ID
-    redirectUri: "https://mac-pp.vercel.app",
-    postLogoutRedirectUri: "https://mac-pp.vercel.app",
+    redirectUri: window.location.origin,
+    postLogoutRedirectUri: window.location.origin,
   },
   cache: {
     cacheLocation: "sessionStorage",
