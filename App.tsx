@@ -296,12 +296,25 @@ const App: React.FC = () => {
       }
     });
 
-    // Milestone diffs
+    // Milestone diffs - handle both boolean (legacy) and MilestoneStatus
+    const getStatusLabel = (value: MilestoneStatus | boolean): string => {
+      if (typeof value === 'boolean') {
+        return value ? 'Completed' : 'Not Started';
+      }
+      switch (value) {
+        case 'not_started': return 'Not Started';
+        case 'started': return 'Started';
+        case 'stuck': return 'Stuck';
+        case 'completed': return 'Completed';
+        default: return 'Unknown';
+      }
+    };
+
     const mKeys = Object.keys(original.milestones) as (keyof Milestones)[];
     mKeys.forEach(k => {
       if (original.milestones[k] !== updated.milestones[k]) {
-        const statusOrig = original.milestones[k] ? 'Done' : 'Pending';
-        const statusUpd = updated.milestones[k] ? 'Done' : 'Pending';
+        const statusOrig = getStatusLabel(original.milestones[k]);
+        const statusUpd = getStatusLabel(updated.milestones[k]);
         diffs.push(`${k.toUpperCase()}: ${statusOrig} -> ${statusUpd}`);
       }
     });
