@@ -787,11 +787,11 @@ const App: React.FC = () => {
                         <div className="flex-1 p-6">
                           {/* Header with status, title, lead and progress */}
                           <div className="flex items-center gap-4 mb-5">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                              p.status === 'Critical' ? 'bg-red-500 text-white' :
-                              p.status === 'Late' ? 'bg-amber-400 text-white' :
-                              p.status === 'Done' ? 'bg-green-500 text-white' :
-                              'bg-blue-500 text-white'
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase border ${
+                              p.status === 'Critical' ? 'bg-red-50 text-red-600 border-red-200' :
+                              p.status === 'Late' ? 'bg-orange-50 text-orange-600 border-orange-200' :
+                              p.status === 'Done' ? 'bg-green-50 text-green-600 border-green-200' :
+                              'bg-blue-50 text-blue-600 border-blue-200'
                             }`}>{p.status}</span>
                             <h3 className="text-xl font-bold text-slate-800 flex-1">{p.utility} / {p.substation}</h3>
                             <div className="flex items-center gap-3 text-sm text-slate-500">
@@ -861,7 +861,7 @@ const App: React.FC = () => {
                           </div>
 
                           {/* Description */}
-                          <div className="border-l-4 border-mac-accent pl-4 py-1">
+                          <div>
                             <p className="text-sm text-slate-600 leading-relaxed">{p.description || 'No description available.'}</p>
                           </div>
                         </div>
