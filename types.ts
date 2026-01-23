@@ -9,10 +9,21 @@ export interface Milestones {
   ship: MilestoneStatus | boolean;
 }
 
+export interface PunchListAttachment {
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+  fileName: string;
+  fileSize: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
 export interface PunchListItem {
   id: string;
   description: string;
   completed: boolean;
+  attachments?: PunchListAttachment[];
 }
 
 export type ProjectStatus = 'Active' | 'Critical' | 'Late' | 'Done';

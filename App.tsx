@@ -9,7 +9,8 @@ import {
   ChangeLogEntry,
   Milestones,
   MilestoneStatus,
-  PunchListItem
+  PunchListItem,
+  PunchListAttachment
 } from './types';
 
 // Helper to check if milestone is completed (for stats)
@@ -46,6 +47,9 @@ import { Login } from './components/Login';
 import { MilestoneStepper } from './components/MilestoneStepper';
 import { ProjectEditModal } from './components/ProjectEditModal';
 import { NewProjectModal } from './components/NewProjectModal';
+import { AttachmentUploader } from './components/AttachmentUploader';
+import { AttachmentPreview } from './components/AttachmentPreview';
+import { AttachmentLightbox } from './components/AttachmentLightbox';
 import { supabase } from './supabase';
 
 const App: React.FC = () => {
@@ -62,6 +66,9 @@ const App: React.FC = () => {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [lightboxAttachment, setLightboxAttachment] = useState<PunchListAttachment | null>(null);
+  const [lightboxProjectId, setLightboxProjectId] = useState<number | null>(null);
+  const [lightboxItemId, setLightboxItemId] = useState<string | null>(null);
 
   // Sync MSAL auth state with currentUser
   useEffect(() => {
@@ -520,6 +527,143 @@ const App: React.FC = () => {
     }
   };
 
+  // Add attachment to punch list item
+  const handleAddAttachment = async (projectId: number, itemId: string, attachment: PunchListAttachment) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !project.punchList) return;
+
+    const punchItem = project.punchList.find(i => i.id === itemId);
+    if (!punchItem) return;
+
+    const updatedPunchList = project.punchList.map(item =>
+      item.id === itemId
+        ? { ...item, attachments: [...(item.attachments || []), attachment] }
+        : item
+    );
+
+    // Update in Supabase
+    const { error } = await supabase
+      .from('projects')
+      .update({ punch_list: updatedPunchList })
+      .eq('id', projectId);
+
+    if (error) {
+      console.error('Error adding attachment:', error);
+      return;
+    }
+
+    // Update local state
+    setProjects(prev => prev.map(p =>
+      p.id === projectId ? { ...p, punchList: updatedPunchList } : p
+    ));
+
+    // Log the change to audit log
+    const { data: logData, error: logError } = await supabase
+      .from('changelog')
+      .insert({
+        timestamp: new Date().toLocaleString(),
+        user_email: currentUser || 'Unknown',
+        project_id: projectId,
+        project_info: `${project.utility} - ${project.substation}`,
+        action: 'Punch List: Attachment Added',
+        changes: `Added "${attachment.fileName}" to "${punchItem.description}"`
+      })
+      .select()
+      .single();
+
+    if (!logError && logData) {
+      const newLog: ChangeLogEntry = {
+        id: logData.id,
+        timestamp: logData.timestamp,
+        userEmail: logData.user_email,
+        projectId: logData.project_id,
+        projectInfo: logData.project_info,
+        action: logData.action,
+        changes: logData.changes
+      };
+      setChangeLog(prev => [newLog, ...prev]);
+    }
+  };
+
+  // Delete attachment from punch list item
+  const handleDeleteAttachment = async (projectId: number, itemId: string, attachmentId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !project.punchList) return;
+
+    const punchItem = project.punchList.find(i => i.id === itemId);
+    const attachment = punchItem?.attachments?.find(a => a.id === attachmentId);
+    if (!punchItem || !attachment) return;
+
+    const updatedPunchList = project.punchList.map(item =>
+      item.id === itemId
+        ? { ...item, attachments: (item.attachments || []).filter(a => a.id !== attachmentId) }
+        : item
+    );
+
+    // Update in Supabase
+    const { error } = await supabase
+      .from('projects')
+      .update({ punch_list: updatedPunchList })
+      .eq('id', projectId);
+
+    if (error) {
+      console.error('Error deleting attachment:', error);
+      return;
+    }
+
+    // Update local state
+    setProjects(prev => prev.map(p =>
+      p.id === projectId ? { ...p, punchList: updatedPunchList } : p
+    ));
+
+    // Log the change to audit log
+    const { data: logData, error: logError } = await supabase
+      .from('changelog')
+      .insert({
+        timestamp: new Date().toLocaleString(),
+        user_email: currentUser || 'Unknown',
+        project_id: projectId,
+        project_info: `${project.utility} - ${project.substation}`,
+        action: 'Punch List: Attachment Removed',
+        changes: `Removed "${attachment.fileName}" from "${punchItem.description}"`
+      })
+      .select()
+      .single();
+
+    if (!logError && logData) {
+      const newLog: ChangeLogEntry = {
+        id: logData.id,
+        timestamp: logData.timestamp,
+        userEmail: logData.user_email,
+        projectId: logData.project_id,
+        projectInfo: logData.project_info,
+        action: logData.action,
+        changes: logData.changes
+      };
+      setChangeLog(prev => [newLog, ...prev]);
+    }
+  };
+
+  // Lightbox helpers
+  const openLightbox = (projectId: number, itemId: string, attachment: PunchListAttachment) => {
+    setLightboxProjectId(projectId);
+    setLightboxItemId(itemId);
+    setLightboxAttachment(attachment);
+  };
+
+  const closeLightbox = () => {
+    setLightboxAttachment(null);
+    setLightboxProjectId(null);
+    setLightboxItemId(null);
+  };
+
+  const getCurrentLightboxAttachments = (): PunchListAttachment[] => {
+    if (!lightboxProjectId || !lightboxItemId) return [];
+    const project = projects.find(p => p.id === lightboxProjectId);
+    const item = project?.punchList?.find(i => i.id === lightboxItemId);
+    return item?.attachments || [];
+  };
+
   // Get projects with FAT milestone completed and punch lists
   const fatProjectsWithPunchList = useMemo(() => {
     return projects.filter(p => isMilestoneActive(p.milestones.fat) && p.punchList && p.punchList.length > 0);
@@ -913,41 +1057,78 @@ const App: React.FC = () => {
                         {project.punchList?.map((item, idx) => (
                           <div
                             key={item.id}
-                            className={`flex items-start gap-4 p-4 rounded-xl border transition-all cursor-pointer hover:shadow-md ${
+                            className={`p-4 rounded-xl border transition-all hover:shadow-md ${
                               item.completed
                                 ? 'bg-green-50 border-green-200'
                                 : 'bg-slate-50 border-slate-200 hover:border-mac-accent'
                             }`}
-                            onClick={() => handleTogglePunchItem(project.id, item.id)}
                           >
-                            {/* Vertical stepper-style checkbox */}
-                            <div className="flex flex-col items-center">
-                              <div
-                                className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                                  item.completed
-                                    ? 'bg-green-500 border-green-500 text-white'
-                                    : 'bg-white border-slate-300 text-slate-400'
-                                }`}
-                              >
-                                {item.completed ? (
-                                  <CheckIcon className="w-5 h-5" />
-                                ) : (
-                                  <span className="text-xs font-bold">{idx + 1}</span>
+                            {/* Main item row - clickable for toggle */}
+                            <div
+                              className="flex items-start gap-4 cursor-pointer"
+                              onClick={() => handleTogglePunchItem(project.id, item.id)}
+                            >
+                              {/* Vertical stepper-style checkbox */}
+                              <div className="flex flex-col items-center">
+                                <div
+                                  className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                                    item.completed
+                                      ? 'bg-green-500 border-green-500 text-white'
+                                      : 'bg-white border-slate-300 text-slate-400'
+                                  }`}
+                                >
+                                  {item.completed ? (
+                                    <CheckIcon className="w-5 h-5" />
+                                  ) : (
+                                    <span className="text-xs font-bold">{idx + 1}</span>
+                                  )}
+                                </div>
+                                {idx < (project.punchList?.length || 0) - 1 && (
+                                  <div className={`w-0.5 h-6 mt-2 ${item.completed ? 'bg-green-300' : 'bg-slate-200'}`} />
                                 )}
                               </div>
-                              {idx < (project.punchList?.length || 0) - 1 && (
-                                <div className={`w-0.5 h-6 mt-2 ${item.completed ? 'bg-green-300' : 'bg-slate-200'}`} />
-                              )}
+
+                              {/* Item description */}
+                              <div className="flex-1 pt-1">
+                                <div className="flex items-center gap-2">
+                                  <p className={`font-medium ${item.completed ? 'text-green-700 line-through' : 'text-slate-700'}`}>
+                                    {item.description}
+                                  </p>
+                                  {/* Attachment count badge */}
+                                  {(item.attachments?.length || 0) > 0 && (
+                                    <span className="text-[10px] text-blue-600 bg-blue-100 px-2 py-0.5 rounded font-semibold">
+                                      {item.attachments?.length} photo{(item.attachments?.length || 0) > 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  {item.completed ? 'Completed - Click to reopen' : 'Click to mark as complete'}
+                                </p>
+                              </div>
                             </div>
 
-                            {/* Item description */}
-                            <div className="flex-1 pt-1">
-                              <p className={`font-medium ${item.completed ? 'text-green-700 line-through' : 'text-slate-700'}`}>
-                                {item.description}
-                              </p>
-                              <p className="text-xs text-slate-400 mt-1">
-                                {item.completed ? 'Completed - Click to reopen' : 'Click to mark as complete'}
-                              </p>
+                            {/* Attachments section - separate from toggle area */}
+                            <div className="mt-3 ml-12" onClick={(e) => e.stopPropagation()}>
+                              {/* Preview existing attachments */}
+                              <AttachmentPreview
+                                attachments={item.attachments || []}
+                                onDelete={(attachmentId) => handleDeleteAttachment(project.id, item.id, attachmentId)}
+                                onView={(attachment) => openLightbox(project.id, item.id, attachment)}
+                                compact
+                              />
+
+                              {/* Upload button */}
+                              <div className="mt-2">
+                                <AttachmentUploader
+                                  projectId={project.id}
+                                  itemId={item.id}
+                                  currentCount={item.attachments?.length || 0}
+                                  maxAttachments={5}
+                                  userEmail={currentUser || 'Unknown'}
+                                  onUploadComplete={(attachment) => handleAddAttachment(project.id, item.id, attachment)}
+                                  compact
+                                />
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1122,6 +1303,7 @@ const App: React.FC = () => {
           onSave={handleSaveProject}
           onCancel={() => setEditingProject(null)}
           onDelete={handleDeleteProject}
+          userEmail={currentUser || 'Unknown'}
         />
       )}
 
@@ -1131,6 +1313,16 @@ const App: React.FC = () => {
           onSave={handleAddProject}
           onCancel={() => setShowNewProjectModal(false)}
           nextId={Math.max(...projects.map(p => p.id)) + 1}
+        />
+      )}
+
+      {/* ATTACHMENT LIGHTBOX */}
+      {lightboxAttachment && (
+        <AttachmentLightbox
+          attachment={lightboxAttachment}
+          allAttachments={getCurrentLightboxAttachments()}
+          onClose={closeLightbox}
+          onNavigate={(attachment) => setLightboxAttachment(attachment)}
         />
       )}
     </div>

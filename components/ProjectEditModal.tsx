@@ -1,8 +1,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Project, Milestones, MilestoneStatus, PunchListItem } from '../types';
+import { Project, Milestones, MilestoneStatus, PunchListItem, PunchListAttachment } from '../types';
 import { MilestoneStepper } from './MilestoneStepper';
 import { SaveIcon as SaveSvg, PlusIcon, CheckIcon } from '../constants';
+import { AttachmentUploader } from './AttachmentUploader';
+import { AttachmentPreview } from './AttachmentPreview';
+import { AttachmentLightbox } from './AttachmentLightbox';
 
 // Helper to check if a milestone is "active" (not not_started)
 const isMilestoneActive = (value: MilestoneStatus | boolean): boolean => {
@@ -15,12 +18,15 @@ interface ProjectEditModalProps {
   onSave: (updatedProject: Project) => void;
   onCancel: () => void;
   onDelete: (projectId: number) => void;
+  userEmail?: string;
 }
 
-export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onSave, onCancel, onDelete }) => {
+export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onSave, onCancel, onDelete, userEmail = 'Unknown' }) => {
   const [form, setForm] = useState<Project>({ ...project });
   const [newPunchItem, setNewPunchItem] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [lightboxAttachment, setLightboxAttachment] = useState<PunchListAttachment | null>(null);
+  const [lightboxItemId, setLightboxItemId] = useState<string | null>(null);
   const punchListRef = useRef<HTMLDivElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +81,44 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
         item.id === itemId ? { ...item, completed: !item.completed } : item
       )
     }));
+  };
+
+  const handleAddAttachment = (itemId: string, attachment: PunchListAttachment) => {
+    setForm(prev => ({
+      ...prev,
+      punchList: (prev.punchList || []).map(item =>
+        item.id === itemId
+          ? { ...item, attachments: [...(item.attachments || []), attachment] }
+          : item
+      )
+    }));
+  };
+
+  const handleDeleteAttachment = (itemId: string, attachmentId: string) => {
+    setForm(prev => ({
+      ...prev,
+      punchList: (prev.punchList || []).map(item =>
+        item.id === itemId
+          ? { ...item, attachments: (item.attachments || []).filter(a => a.id !== attachmentId) }
+          : item
+      )
+    }));
+  };
+
+  const openLightbox = (itemId: string, attachment: PunchListAttachment) => {
+    setLightboxItemId(itemId);
+    setLightboxAttachment(attachment);
+  };
+
+  const closeLightbox = () => {
+    setLightboxAttachment(null);
+    setLightboxItemId(null);
+  };
+
+  const getCurrentItemAttachments = (): PunchListAttachment[] => {
+    if (!lightboxItemId) return [];
+    const item = (form.punchList || []).find(i => i.id === lightboxItemId);
+    return item?.attachments || [];
   };
 
   return (
@@ -196,38 +240,71 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
               </div>
 
               {/* Punch list items */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {(form.punchList || []).length === 0 ? (
                   <p className="text-sm text-slate-500 text-center py-4">No punch list items yet. Add items that need to be addressed after FAT.</p>
                 ) : (
-                  (form.punchList || []).map((item, idx) => (
+                  (form.punchList || []).map((item) => (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border ${
+                      className={`p-3 rounded-lg border ${
                         item.completed
                           ? 'bg-green-50 border-green-200'
                           : 'bg-white border-slate-200'
                       }`}
                     >
-                      <button
-                        onClick={() => handleTogglePunchItem(item.id)}
-                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
-                          item.completed
-                            ? 'bg-green-500 border-green-500 text-white'
-                            : 'bg-white border-slate-300 hover:border-mac-accent'
-                        }`}
-                      >
-                        {item.completed && <CheckIcon className="w-4 h-4" />}
-                      </button>
-                      <span className={`flex-1 text-sm ${item.completed ? 'text-green-700 line-through' : 'text-slate-700'}`}>
-                        {item.description}
-                      </span>
-                      <button
-                        onClick={() => handleRemovePunchItem(item.id)}
-                        className="text-slate-400 hover:text-red-500 text-lg font-bold"
-                      >
-                        &times;
-                      </button>
+                      {/* Item header row */}
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleTogglePunchItem(item.id)}
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            item.completed
+                              ? 'bg-green-500 border-green-500 text-white'
+                              : 'bg-white border-slate-300 hover:border-mac-accent'
+                          }`}
+                        >
+                          {item.completed && <CheckIcon className="w-4 h-4" />}
+                        </button>
+                        <span className={`flex-1 text-sm ${item.completed ? 'text-green-700 line-through' : 'text-slate-700'}`}>
+                          {item.description}
+                        </span>
+                        {/* Attachment count badge */}
+                        {(item.attachments?.length || 0) > 0 && (
+                          <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded font-semibold">
+                            {item.attachments?.length}/5
+                          </span>
+                        )}
+                        <button
+                          onClick={() => handleRemovePunchItem(item.id)}
+                          className="text-slate-400 hover:text-red-500 text-lg font-bold"
+                        >
+                          &times;
+                        </button>
+                      </div>
+
+                      {/* Attachments section */}
+                      <div className="mt-2 ml-9">
+                        {/* Preview existing attachments */}
+                        <AttachmentPreview
+                          attachments={item.attachments || []}
+                          onDelete={(attachmentId) => handleDeleteAttachment(item.id, attachmentId)}
+                          onView={(attachment) => openLightbox(item.id, attachment)}
+                          compact
+                        />
+
+                        {/* Upload button */}
+                        <div className="mt-2">
+                          <AttachmentUploader
+                            projectId={form.id}
+                            itemId={item.id}
+                            currentCount={item.attachments?.length || 0}
+                            maxAttachments={5}
+                            userEmail={userEmail}
+                            onUploadComplete={(attachment) => handleAddAttachment(item.id, attachment)}
+                            compact
+                          />
+                        </div>
+                      </div>
                     </div>
                   ))
                 )}
@@ -277,6 +354,16 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
               </div>
             </div>
           </div>
+        )}
+
+        {/* Attachment Lightbox */}
+        {lightboxAttachment && (
+          <AttachmentLightbox
+            attachment={lightboxAttachment}
+            allAttachments={getCurrentItemAttachments()}
+            onClose={closeLightbox}
+            onNavigate={(attachment) => setLightboxAttachment(attachment)}
+          />
         )}
       </div>
     </div>
