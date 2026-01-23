@@ -8,8 +8,21 @@ import {
   ProjectCategory,
   ChangeLogEntry,
   Milestones,
+  MilestoneStatus,
   PunchListItem
 } from './types';
+
+// Helper to check if milestone is completed (for stats)
+const isMilestoneCompleted = (value: MilestoneStatus | boolean): boolean => {
+  if (typeof value === 'boolean') return value;
+  return value === 'completed';
+};
+
+// Helper to check if milestone is active (started, stuck, or completed)
+const isMilestoneActive = (value: MilestoneStatus | boolean): boolean => {
+  if (typeof value === 'boolean') return value;
+  return value !== 'not_started';
+};
 import {
   INITIAL_DATA,
   DashboardIcon,
@@ -496,7 +509,7 @@ const App: React.FC = () => {
 
   // Get projects with FAT milestone completed and punch lists
   const fatProjectsWithPunchList = useMemo(() => {
-    return projects.filter(p => p.milestones.fat && p.punchList && p.punchList.length > 0);
+    return projects.filter(p => isMilestoneActive(p.milestones.fat) && p.punchList && p.punchList.length > 0);
   }, [projects]);
 
   // --- Filtering ---
@@ -516,8 +529,8 @@ const App: React.FC = () => {
 
   const stats = useMemo(() => {
     const critical = projects.filter(p => p.status === 'Critical').length;
-    const fatReady = projects.filter(p => p.milestones.fab && !p.milestones.fat).length;
-    const shipReady = projects.filter(p => p.milestones.fat && !p.milestones.ship).length;
+    const fatReady = projects.filter(p => isMilestoneCompleted(p.milestones.fab) && !isMilestoneCompleted(p.milestones.fat)).length;
+    const shipReady = projects.filter(p => isMilestoneCompleted(p.milestones.fat) && !isMilestoneCompleted(p.milestones.ship)).length;
     const done = projects.filter(p => p.status === 'Done').length;
     return { total: projects.length, critical, fatReady, shipReady, done };
   }, [projects]);
@@ -807,37 +820,7 @@ const App: React.FC = () => {
 
                           {/* Milestone Stepper */}
                           <div className="mb-6">
-                            <div className="flex items-center max-w-lg">
-                              {[
-                                { key: 'design', label: 'DESIGN' },
-                                { key: 'mat', label: 'MATL.' },
-                                { key: 'fab', label: 'FAB' },
-                                { key: 'fat', label: 'FAT' },
-                                { key: 'ship', label: 'DELIV.' }
-                              ].map((step, idx, arr) => (
-                                <React.Fragment key={step.key}>
-                                  <div className="flex flex-col items-center">
-                                    <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center ${
-                                      p.milestones[step.key as keyof Milestones]
-                                        ? 'bg-mac-accent border-mac-accent text-white'
-                                        : 'border-slate-300 bg-white'
-                                    }`}>
-                                      {p.milestones[step.key as keyof Milestones] && (
-                                        <CheckIcon className="w-4 h-4" />
-                                      )}
-                                    </div>
-                                    <span className={`text-[10px] font-bold mt-1 ${
-                                      p.milestones[step.key as keyof Milestones] ? 'text-mac-accent' : 'text-slate-400'
-                                    }`}>{step.label}</span>
-                                  </div>
-                                  {idx < arr.length - 1 && (
-                                    <div className={`flex-1 h-0.5 mx-2 -mt-3 ${
-                                      p.milestones[step.key as keyof Milestones] ? 'bg-mac-accent' : 'bg-slate-200'
-                                    }`} />
-                                  )}
-                                </React.Fragment>
-                              ))}
-                            </div>
+                            <MilestoneStepper milestones={p.milestones} />
                           </div>
 
                           {/* Details Row */}

@@ -1,10 +1,12 @@
 
+export type MilestoneStatus = 'not_started' | 'started' | 'stuck' | 'completed';
+
 export interface Milestones {
-  design: boolean;
-  mat: boolean;
-  fab: boolean;
-  fat: boolean;
-  ship: boolean;
+  design: MilestoneStatus | boolean;
+  mat: MilestoneStatus | boolean;
+  fab: MilestoneStatus | boolean;
+  fat: MilestoneStatus | boolean;
+  ship: MilestoneStatus | boolean;
 }
 
 export interface PunchListItem {

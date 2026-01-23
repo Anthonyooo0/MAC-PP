@@ -1,8 +1,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Project, Milestones, PunchListItem } from '../types';
+import { Project, Milestones, MilestoneStatus, PunchListItem } from '../types';
 import { MilestoneStepper } from './MilestoneStepper';
 import { SaveIcon as SaveSvg, PlusIcon, CheckIcon } from '../constants';
+
+// Helper to check if a milestone is "active" (not not_started)
+const isMilestoneActive = (value: MilestoneStatus | boolean): boolean => {
+  if (typeof value === 'boolean') return value;
+  return value !== 'not_started';
+};
 
 interface ProjectEditModalProps {
   project: Project;
@@ -18,9 +24,9 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
   const punchListRef = useRef<HTMLDivElement>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to punch list section when FAT milestone is checked
+  // Auto-scroll to punch list section when FAT milestone is activated
   useEffect(() => {
-    if (form.milestones.fat && !project.milestones.fat) {
+    if (isMilestoneActive(form.milestones.fat) && !isMilestoneActive(project.milestones.fat)) {
       // Wait for the punch list section to render, then scroll to it
       setTimeout(() => {
         if (punchListRef.current && modalContentRef.current) {
@@ -34,7 +40,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleMilestoneChange = (key: keyof Milestones, value: boolean) => {
+  const handleMilestoneChange = (key: keyof Milestones, value: MilestoneStatus) => {
     setForm(prev => ({
       ...prev,
       milestones: { ...prev.milestones, [key]: value }
@@ -85,14 +91,33 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div className="flex justify-between items-center mb-4">
               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Billable Phases</h4>
-              <span className="text-[10px] text-mac-accent bg-blue-50 px-2 py-1 rounded font-semibold">Click to toggle</span>
+              <span className="text-[10px] text-mac-accent bg-blue-50 px-2 py-1 rounded font-semibold">Click to cycle status</span>
             </div>
             <div className="flex justify-center">
-              <MilestoneStepper 
-                milestones={form.milestones} 
-                readOnly={false} 
-                onChange={handleMilestoneChange} 
+              <MilestoneStepper
+                milestones={form.milestones}
+                readOnly={false}
+                onChange={handleMilestoneChange}
               />
+            </div>
+            {/* Color Legend */}
+            <div className="flex justify-center gap-4 mt-4 pt-3 border-t border-slate-200">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-slate-200 border border-slate-300"></div>
+                <span className="text-[10px] text-slate-500">Not Started</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span className="text-[10px] text-slate-500">Started</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                <span className="text-[10px] text-slate-500">Stuck</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-[10px] text-slate-500">Completed</span>
+              </div>
             </div>
           </div>
 
@@ -139,8 +164,8 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({ project, onS
             <textarea value={form.comments} onChange={(e) => handleFieldChange('comments', e.target.value)} rows={3} className="w-full p-2.5 border border-slate-300 rounded-lg text-sm" />
           </div>
 
-          {/* Punch List Section - Shows when FAT milestone is checked */}
-          {form.milestones.fat && (
+          {/* Punch List Section - Shows when FAT milestone is active */}
+          {isMilestoneActive(form.milestones.fat) && (
             <div
               ref={punchListRef}
               className="p-4 rounded-xl border-2 bg-slate-50 border-slate-200"
